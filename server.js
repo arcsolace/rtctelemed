@@ -9,38 +9,32 @@ app.set('view engine', 'ejs');
 app.use(express.static('public'));
 
 app.get('/', (req, res) => {
-  res.redirect(`/${uuidV4()}`)
-})
+  const room = uuidV4();
+  res.redirect(`/${room}`);
+  controller.createSession(room);
+});
 
 app.get('/:room', (req, res) => {
-  var room_id = req.params.room
-  res.render('room', { roomId: room_id })
-  controller.createSession(room_id)
-})
+  res.render('room', { roomId: req.params.room });
+});
 
 app.get('/api/list', (req, res) => {
-  controller.getSessionList(req, res)
-})
+  controller.getSessionList(req, res);
+});
 
 io.on('connection', socket => {
   socket.on('join-room', (roomId, userId) => {
-    socket.join(roomId)
-    socket.broadcast.to(roomId).emit('user-connected', userId)
-    try {
-      console.log('connected!')
-      controller.connectUser(roomId, userId)
-    } finally {
-      console.log('updated!')
-      controller.checkSession(roomId, userId)
-    }
+    socket.join(roomId);
+    controller.connectUser(roomId, userId);
+    controller.checkSession(roomId, userId);
+    socket.broadcast.to(roomId).emit('user-connected', userId);
 
     socket.on('disconnect', () => {
-        socket.broadcast.to(roomId).emit('user-disconnected', userId)
-        console.log('disconnected!')
-        controller.disconnectUser(roomId, userId)
-    })
-  })
-})
+      controller.disconnectUser(roomId, userId);
+      socket.broadcast.to(roomId).emit('user-disconnected', userId);
+    });
+  });
+});
 
-server.listen(process.env.PORT||5000);
-console.log('Started...')
+server.listen(process.env.PORT||3000);
+console.log('Started...');
